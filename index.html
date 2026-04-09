@@ -26,6 +26,21 @@
     <button class="filter-btn" data-filter="commercial"><span class="dot" style="background:var(--cat-commercial)"></span>Commercial</button>
     <button class="filter-btn" data-filter="utility"><span class="dot" style="background:var(--cat-utility)"></span>Utilities</button>
   </div>
+  <div class="filter-dropdown" id="filterDropdown">
+    <button class="filter-dropdown-toggle" id="filterToggle">
+      <span class="filter-dropdown-label" id="filterLabel">All</span>
+      <span class="filter-dropdown-arrow">&#9662;</span>
+    </button>
+    <div class="filter-dropdown-menu" id="filterMenu">
+      <button class="filter-dropdown-item active" data-filter="all">All</button>
+      <button class="filter-dropdown-item" data-filter="government"><span class="dot" style="background:var(--cat-government)"></span>Government</button>
+      <button class="filter-dropdown-item" data-filter="road"><span class="dot" style="background:var(--cat-road)"></span>Roads</button>
+      <button class="filter-dropdown-item" data-filter="bridge"><span class="dot" style="background:var(--cat-bridge)"></span>Bridges</button>
+      <button class="filter-dropdown-item" data-filter="residential"><span class="dot" style="background:var(--cat-residential)"></span>Residential</button>
+      <button class="filter-dropdown-item" data-filter="commercial"><span class="dot" style="background:var(--cat-commercial)"></span>Commercial</button>
+      <button class="filter-dropdown-item" data-filter="utility"><span class="dot" style="background:var(--cat-utility)"></span>Utilities</button>
+    </div>
+  </div>
   <div class="topbar-divider"></div>
   <div class="layer-toggle">
     <button class="layer-btn active" data-layer="street">Map</button>
@@ -36,8 +51,10 @@
 <div class="main-layout">
   <div class="map-container">
     <div id="map"></div>
+    <button class="home-btn" id="homeBtn" title="Reset view">&#8962;</button>
   </div>
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-drag-handle" id="sidebarHandle"><span class="drag-bar"></span></div>
     <div class="sidebar-header">
       <h2>Latest News</h2>
       <div class="view-info">

@@ -289,17 +289,34 @@ map.on('zoomend', debouncedRender);
 renderSidebar();
 
 // ══════════════════════════════════════════════════════════
-//  CATEGORY FILTERS
+//  HOME BUTTON
 // ══════════════════════════════════════════════════════════
-document.getElementById('filters').addEventListener('click', (e) => {
-  const btn = e.target.closest('.filter-btn');
-  if (!btn) return;
+const DEFAULT_CENTER = [16.505, 80.515];
+const DEFAULT_ZOOM = 13;
 
-  const filter = btn.dataset.filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+document.getElementById('homeBtn').addEventListener('click', () => {
+  map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: true });
+});
+
+// ══════════════════════════════════════════════════════════
+//  CATEGORY FILTERS (desktop pills)
+// ══════════════════════════════════════════════════════════
+function applyFilter(filter) {
   activeFilter = filter;
 
+  // Sync desktop pills
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+
+  // Sync mobile dropdown
+  document.querySelectorAll('.filter-dropdown-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  document.getElementById('filterLabel').textContent =
+    filter === 'all' ? 'All' : (CATEGORY_LABELS[filter] || filter);
+
+  // Toggle layers
   Object.entries(layerGroups).forEach(([cat, group]) => {
     if (filter === 'all' || filter === cat) {
       map.addLayer(group);
@@ -309,4 +326,101 @@ document.getElementById('filters').addEventListener('click', (e) => {
   });
 
   renderSidebar();
+}
+
+document.getElementById('filters').addEventListener('click', (e) => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  applyFilter(btn.dataset.filter);
 });
+
+// ══════════════════════════════════════════════════════════
+//  FILTER DROPDOWN (mobile)
+// ══════════════════════════════════════════════════════════
+const filterToggle = document.getElementById('filterToggle');
+const filterMenu = document.getElementById('filterMenu');
+
+filterToggle.addEventListener('click', () => {
+  filterMenu.classList.toggle('open');
+});
+
+filterMenu.addEventListener('click', (e) => {
+  const item = e.target.closest('.filter-dropdown-item');
+  if (!item) return;
+  applyFilter(item.dataset.filter);
+  filterMenu.classList.remove('open');
+});
+
+// Close dropdown when tapping outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.filter-dropdown')) {
+    filterMenu.classList.remove('open');
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+//  SIDEBAR DRAG TO RESIZE (mobile)
+// ══════════════════════════════════════════════════════════
+const sidebar = document.getElementById('sidebar');
+const sidebarHandle = document.getElementById('sidebarHandle');
+const SIDEBAR_SNAP_MIN = 15;  // vh
+const SIDEBAR_SNAP_MID = 40;  // vh
+const SIDEBAR_SNAP_MAX = 75;  // vh
+
+let dragStartY = 0;
+let dragStartHeight = 0;
+let isDragging = false;
+
+function onDragStart(clientY) {
+  isDragging = true;
+  dragStartY = clientY;
+  dragStartHeight = sidebar.offsetHeight;
+  sidebar.style.transition = 'none';
+}
+
+function onDragMove(clientY) {
+  if (!isDragging) return;
+  const delta = dragStartY - clientY;
+  const newHeight = Math.max(50, Math.min(window.innerHeight * 0.85, dragStartHeight + delta));
+  sidebar.style.height = newHeight + 'px';
+}
+
+function onDragEnd() {
+  if (!isDragging) return;
+  isDragging = false;
+  sidebar.style.transition = '';
+
+  // Snap to nearest position
+  const currentVh = (sidebar.offsetHeight / window.innerHeight) * 100;
+  const snaps = [SIDEBAR_SNAP_MIN, SIDEBAR_SNAP_MID, SIDEBAR_SNAP_MAX];
+  const closest = snaps.reduce((a, b) =>
+    Math.abs(b - currentVh) < Math.abs(a - currentVh) ? b : a
+  );
+  sidebar.style.height = closest + 'vh';
+
+  // Invalidate map size after resize
+  setTimeout(() => map.invalidateSize(), 350);
+}
+
+// Touch events
+sidebarHandle.addEventListener('touchstart', (e) => {
+  onDragStart(e.touches[0].clientY);
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+  if (isDragging) onDragMove(e.touches[0].clientY);
+}, { passive: true });
+
+document.addEventListener('touchend', onDragEnd);
+
+// Mouse events (for testing on desktop)
+sidebarHandle.addEventListener('mousedown', (e) => {
+  onDragStart(e.clientY);
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) onDragMove(e.clientY);
+});
+
+document.addEventListener('mouseup', onDragEnd);
