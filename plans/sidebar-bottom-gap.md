@@ -4,6 +4,14 @@
 
 The YouTube tab in the sidebar leaves visible empty space at the bottom, below the last video grid. The Articles tab does not have this issue.
 
+### Screenshots
+
+Desktop — YouTube tab with empty bottom gap:
+![YouTube gap](../tests/images/screenshot-youtube-tab.png)
+
+User-annotated — the gap is visible below the last row of video cards:
+![Bottom gap annotated](../tests/images/screenshot-youtube-gap-annotated.png)
+
 ## Why Articles Works
 
 Articles are block-level `<a>` elements that stack vertically with `border-bottom` separators. They flow continuously and naturally fill the width. The content is a flat list — no wrapper with its own layout constraints.
