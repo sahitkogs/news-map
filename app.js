@@ -163,6 +163,9 @@ const sidebarBody = document.getElementById('sidebarBody');
 const visibleCountEl = document.getElementById('visibleCount');
 let activeFilter = 'all';
 let renderGeneration = 0;
+let lastVisibleIds = ''; // track visible set to skip redundant renders
+// Collected articles keyed by location id — persists across renders
+const articlesByLoc = new Map();
 
 function getVisibleLocations() {
   const bounds = map.getBounds();
@@ -196,7 +199,14 @@ function renderArticleHtml(article) {
   `;
 }
 
-function renderFeed(allArticles) {
+function buildFeedHtml(visibleIds) {
+  // Collect all articles for currently visible locations
+  const allArticles = [];
+  visibleIds.forEach(id => {
+    const arts = articlesByLoc.get(id);
+    if (arts) allArticles.push(...arts);
+  });
+
   // Deduplicate by URL
   const seen = new Set();
   const unique = allArticles.filter(a => {
@@ -225,14 +235,10 @@ function renderFeed(allArticles) {
     html += articles.map(renderArticleHtml).join('');
   });
 
-  if (html === '') {
-    sidebarBody.innerHTML = `<div class="sidebar-empty">No news found for visible locations.</div>`;
-  } else {
-    sidebarBody.innerHTML = html;
-  }
+  return html;
 }
 
-function renderSidebar() {
+function renderSidebar(forceRefresh) {
   renderGeneration++;
   const gen = renderGeneration;
 
@@ -240,37 +246,68 @@ function renderSidebar() {
   visibleCountEl.textContent = visible.length;
 
   if (visible.length === 0) {
+    lastVisibleIds = '';
     sidebarBody.innerHTML = `<div class="sidebar-empty">No locations in the current view.<br>Zoom out or pan the map to see locations.</div>`;
     return;
   }
 
-  // Show loading
-  sidebarBody.innerHTML = `
-    <div class="news-loading" style="justify-content:center;padding:30px 16px;">
-      <div class="news-loading-spinner"></div>
-      Loading news for ${visible.length} locations...
-    </div>
-  `;
+  const visibleIds = new Set(visible.map(l => l.id));
+  const visibleKey = [...visibleIds].sort().join(',');
 
-  // Fetch all in parallel, collect results
-  const allArticles = [];
+  // Skip if same set of locations and not forced
+  if (!forceRefresh && visibleKey === lastVisibleIds) return;
+  lastVisibleIds = visibleKey;
+
+  // Find which locations need fetching (not in articlesByLoc or cache expired)
+  const toFetch = visible.filter(loc => {
+    const cached = newsCache.get(loc.searchKeywords);
+    if (cached && (Date.now() - cached.fetchedAt) < CACHE_TTL) {
+      // Ensure articlesByLoc is populated from cache
+      if (!articlesByLoc.has(loc.id)) {
+        articlesByLoc.set(loc.id, cached.articles.map(a => ({ ...a, _loc: loc })));
+      }
+      return false;
+    }
+    return true;
+  });
+
+  // If nothing to fetch, render immediately from collected articles
+  if (toFetch.length === 0) {
+    const html = buildFeedHtml(visibleIds);
+    sidebarBody.innerHTML = html || `<div class="sidebar-empty">No news found for visible locations.</div>`;
+    return;
+  }
+
+  // Show existing articles immediately, then fetch new ones
+  const existingHtml = buildFeedHtml(visibleIds);
+  if (existingHtml) {
+    sidebarBody.innerHTML = existingHtml;
+  } else {
+    sidebarBody.innerHTML = `
+      <div class="news-loading" style="justify-content:center;padding:30px 16px;">
+        <div class="news-loading-spinner"></div>
+        Loading news for ${toFetch.length} locations...
+      </div>
+    `;
+  }
+
+  // Only fetch locations that actually need it
   let completed = 0;
-
-  visible.forEach(loc => {
+  toFetch.forEach(loc => {
     fetchNews(loc.searchKeywords)
       .then(articles => {
-        articles.forEach(a => {
-          a._loc = loc; // tag each article with its location
-          allArticles.push(a);
-        });
+        articlesByLoc.set(loc.id, articles.map(a => ({ ...a, _loc: loc })));
       })
-      .catch(() => {}) // silently skip failed fetches
+      .catch(() => {
+        articlesByLoc.set(loc.id, []);
+      })
       .finally(() => {
         completed++;
         if (gen !== renderGeneration) return;
 
-        if (completed === visible.length) {
-          renderFeed(allArticles);
+        if (completed === toFetch.length) {
+          const html = buildFeedHtml(visibleIds);
+          sidebarBody.innerHTML = html || `<div class="sidebar-empty">No news found for visible locations.</div>`;
         }
       });
   });
@@ -280,13 +317,13 @@ function renderSidebar() {
 let renderTimeout = null;
 function debouncedRender() {
   clearTimeout(renderTimeout);
-  renderTimeout = setTimeout(renderSidebar, 300);
+  renderTimeout = setTimeout(() => renderSidebar(false), 300);
 }
 
 map.on('moveend', debouncedRender);
 map.on('zoomend', debouncedRender);
 
-renderSidebar();
+renderSidebar(true);
 
 // ══════════════════════════════════════════════════════════
 //  HOME BUTTON
@@ -325,7 +362,7 @@ function applyFilter(filter) {
     }
   });
 
-  renderSidebar();
+  renderSidebar(true);
 }
 
 document.getElementById('filters').addEventListener('click', (e) => {
