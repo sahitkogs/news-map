@@ -133,7 +133,7 @@ body.day-mode .news-article:hover .news-article-title {
 /* ── Home Button ── */
 .home-btn {
   position: absolute;
-  top: 80px;
+  top: 120px;
   left: 10px;
   z-index: 800;
   width: 30px;

@@ -226,6 +226,9 @@ geocoderControl.on('markgeocode', (e) => {
     map.closePopup();
   }
 
+  // Set pendingLocation BEFORE map.setView so renderSidebar won't overwrite
+  pendingLocation = { name, lat: center.lat, lng: center.lng };
+
   // Place temporary marker
   tempMarker = L.marker(center, {
     icon: L.divIcon({
@@ -237,8 +240,6 @@ geocoderControl.on('markgeocode', (e) => {
   }).addTo(map);
 
   map.setView(center, Math.max(map.getZoom(), 12), { animate: true });
-
-  pendingLocation = { name, lat: center.lat, lng: center.lng };
   showConfirmationPanel(pendingLocation);
 });
 
@@ -556,6 +557,9 @@ function buildVideosFeedHtml(visibleIds) {
 
 // ── Unified render ──
 function renderSidebar(forceRefresh) {
+  // Don't overwrite the confirmation panel from debounced map events
+  if (pendingLocation) return;
+
   renderGeneration++;
   const gen = renderGeneration;
 
