@@ -196,7 +196,6 @@ let tutorialStep = -1;
 let tutorialHighlight = null;
 
 function startTutorial() {
-  if (sessionStorage.getItem('tutorialDismissed') === '1') return;
   if (userLocations.length !== 0) return;
   tutorialStep = 0;
   renderTutorialStep();
@@ -205,7 +204,6 @@ function startTutorial() {
 }
 
 function endTutorial() {
-  sessionStorage.setItem('tutorialDismissed', '1');
   clearTutorialHighlight();
   const callout = document.getElementById('tutorialCallout');
   if (callout) callout.hidden = true;
