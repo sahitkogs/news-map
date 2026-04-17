@@ -3,44 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Amaravati Capital Tracker</title>
+<title>News Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.css" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
 <header class="topbar">
   <div class="topbar-brand">
-    <span class="topbar-title">Amaravati Tracker</span>
-    <span class="topbar-subtitle">Capital Construction Monitor</span>
+    <span class="topbar-title">News Map</span>
+    <span class="topbar-subtitle">Track news &amp; videos for any place</span>
   </div>
-  <div class="topbar-divider"></div>
-  <div class="filters" id="filters">
-    <button class="filter-btn active" data-filter="all">All</button>
-    <button class="filter-btn" data-filter="government"><span class="dot" style="background:var(--cat-government)"></span>Government</button>
-    <button class="filter-btn" data-filter="road"><span class="dot" style="background:var(--cat-road)"></span>Roads</button>
-    <button class="filter-btn" data-filter="bridge"><span class="dot" style="background:var(--cat-bridge)"></span>Bridges</button>
-    <button class="filter-btn" data-filter="residential"><span class="dot" style="background:var(--cat-residential)"></span>Residential</button>
-    <button class="filter-btn" data-filter="commercial"><span class="dot" style="background:var(--cat-commercial)"></span>Commercial</button>
-    <button class="filter-btn" data-filter="utility"><span class="dot" style="background:var(--cat-utility)"></span>Utilities</button>
-  </div>
-  <div class="filter-dropdown" id="filterDropdown">
-    <button class="filter-dropdown-toggle" id="filterToggle">
-      <span class="filter-dropdown-label" id="filterLabel">All</span>
-      <span class="filter-dropdown-arrow">&#9662;</span>
-    </button>
-    <div class="filter-dropdown-menu" id="filterMenu">
-      <button class="filter-dropdown-item active" data-filter="all">All</button>
-      <button class="filter-dropdown-item" data-filter="government"><span class="dot" style="background:var(--cat-government)"></span>Government</button>
-      <button class="filter-dropdown-item" data-filter="road"><span class="dot" style="background:var(--cat-road)"></span>Roads</button>
-      <button class="filter-dropdown-item" data-filter="bridge"><span class="dot" style="background:var(--cat-bridge)"></span>Bridges</button>
-      <button class="filter-dropdown-item" data-filter="residential"><span class="dot" style="background:var(--cat-residential)"></span>Residential</button>
-      <button class="filter-dropdown-item" data-filter="commercial"><span class="dot" style="background:var(--cat-commercial)"></span>Commercial</button>
-      <button class="filter-dropdown-item" data-filter="utility"><span class="dot" style="background:var(--cat-utility)"></span>Utilities</button>
-    </div>
-  </div>
+  <div class="topbar-spacer"></div>
+  <div class="point-counter" id="pointCounter">0 / 10 points</div>
   <div class="topbar-divider"></div>
   <div class="layer-toggle">
     <button class="layer-btn theme-toggle" id="themeToggle" title="Toggle day/night">
@@ -78,7 +56,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
