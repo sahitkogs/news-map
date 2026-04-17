@@ -252,6 +252,22 @@ body.day-mode .news-article:hover .news-article-title {
   border-radius: 50%;
 }
 
+/* ── Point Counter (header) ── */
+.topbar-spacer {
+  flex: 1;
+}
+
+.point-counter {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* ── Home Button ── */
 .home-btn {
   position: absolute;
@@ -374,6 +390,251 @@ body.day-mode .news-article:hover .news-article-title {
   border-color: var(--border) !important;
 }
 .leaflet-control-zoom a:hover { background: var(--bg-elevated) !important; color: var(--text-primary) !important; }
+
+/* ── Geocoder Control ── */
+.leaflet-control-geocoder {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+.leaflet-control-geocoder input {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-size: 0.82rem !important;
+}
+
+.leaflet-control-geocoder input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.leaflet-control-geocoder-alternatives {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border) !important;
+  border-top: none !important;
+}
+
+.leaflet-control-geocoder-alternatives li {
+  color: var(--text-primary) !important;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+  font-size: 0.78rem !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.leaflet-control-geocoder-alternatives li:hover,
+.leaflet-control-geocoder-selected {
+  background: var(--bg-hover) !important;
+}
+
+.leaflet-control-geocoder-icon {
+  filter: invert(0.7);
+}
+
+body.day-mode .leaflet-control-geocoder {
+  background: #fff !important;
+  border-color: #ccc !important;
+}
+
+body.day-mode .leaflet-control-geocoder input {
+  background: #fff !important;
+  color: #333 !important;
+}
+
+body.day-mode .leaflet-control-geocoder-alternatives {
+  background: #fff !important;
+  border-color: #ccc !important;
+}
+
+body.day-mode .leaflet-control-geocoder-alternatives li {
+  color: #333 !important;
+  border-color: #eee !important;
+}
+
+body.day-mode .leaflet-control-geocoder-alternatives li:hover {
+  background: #f0f0f0 !important;
+}
+
+body.day-mode .leaflet-control-geocoder-icon {
+  filter: none;
+}
+
+/* ── Confirmation Panel ── */
+.confirmation-panel {
+  padding: 24px 20px;
+}
+
+.confirmation-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.confirmation-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.confirmation-coords {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.confirmation-field-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.confirmation-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.confirmation-input:focus {
+  border-color: var(--accent-gold);
+}
+
+.confirmation-counter {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.confirmation-limit {
+  font-size: 0.75rem;
+  color: #e05555;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.confirmation-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius);
+  border: none;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.confirmation-btn.add {
+  background: var(--accent-gold);
+  color: #000;
+}
+
+.confirmation-btn.add:hover:not(:disabled) {
+  background: var(--accent-gold-dim);
+}
+
+.confirmation-btn.add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.confirmation-btn.cancel {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.confirmation-btn.cancel:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.empty-state-icon {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+.empty-state-counter {
+  margin-top: 16px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── Remove Button in Popup ── */
+.remove-point-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 5px 0;
+  background: transparent;
+  border: 1px solid #e05555;
+  border-radius: 4px;
+  color: #e05555;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.remove-point-btn:hover {
+  background: #e05555;
+  color: #fff;
+}
+
+/* ── Temp Marker (pending add) ── */
+.temp-marker {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.1); }
+  50% { box-shadow: 0 2px 8px rgba(74,158,218,0.6), 0 0 12px rgba(74,158,218,0.3); }
+}
 
 /* ── Custom Markers ── */
 .marker-icon {
