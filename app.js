@@ -2,8 +2,8 @@
 //  MAP INIT
 // ══════════════════════════════════════════════════════════
 const map = L.map('map', {
-  center: [16.505, 80.515],
-  zoom: 13,
+  center: [20, 0],
+  zoom: 2,
   zoomControl: true,
   attributionControl: true
 });
@@ -60,42 +60,49 @@ document.querySelector('[data-layer="satellite"]').addEventListener('click', fun
 });
 
 // ══════════════════════════════════════════════════════════
-//  MARKERS & LAYER GROUPS
+//  USER LOCATIONS — localStorage persistence
 // ══════════════════════════════════════════════════════════
-const layerGroups = {};
+const MAX_POINTS = 10;
+const MARKER_COLOR = '#d4a857';
 
-Object.keys(CATEGORY_COLORS).forEach(cat => {
-  layerGroups[cat] = L.layerGroup().addTo(map);
-});
+function loadUserLocations() {
+  try {
+    const raw = localStorage.getItem('userLocations');
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
 
-LOCATIONS.forEach(loc => {
-  const color = CATEGORY_COLORS[loc.category];
+function saveUserLocations(locs) {
+  localStorage.setItem('userLocations', JSON.stringify(locs));
+}
+
+let userLocations = loadUserLocations();
+
+// ══════════════════════════════════════════════════════════
+//  MARKERS
+// ══════════════════════════════════════════════════════════
+const markerGroup = L.layerGroup().addTo(map);
+const markersById = new Map();
+
+function createMarker(loc) {
   const size = 12;
   const icon = L.divIcon({
     className: '',
-    html: `<div class="marker-icon" style="width:${size}px;height:${size}px;background:${color};" data-id="${loc.id}"></div>`,
+    html: `<div class="marker-icon" style="width:${size}px;height:${size}px;background:${MARKER_COLOR};"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2]
   });
-  const marker = L.marker([loc.lat, loc.lng], { icon }).addTo(layerGroups[loc.category]);
+  const marker = L.marker([loc.lat, loc.lng], { icon }).addTo(markerGroup);
 
-  const catLabel = CATEGORY_LABELS[loc.category];
-  const catColor = CATEGORY_COLORS[loc.category];
-  const statusCfg = STATUS_CONFIG[loc.status];
   const popupContent = `
     <div class="map-popup">
       <div class="map-popup-name">${loc.name}</div>
-      ${loc.nameLocal ? `<div class="map-popup-local">${loc.nameLocal}</div>` : ''}
-      <div class="map-popup-meta">
-        <span class="map-popup-cat" style="color:${catColor};">${catLabel}</span>
-        <span class="map-popup-sep">&middot;</span>
-        <span class="map-popup-status" style="color:${statusCfg.color};">${statusCfg.label}</span>
-      </div>
-      <div class="map-popup-desc">${loc.description}</div>
+      <div class="map-popup-desc">${loc.searchKeywords}</div>
+      <button class="remove-point-btn" data-loc-id="${loc.id}">Remove</button>
     </div>
   `;
 
-  marker.bindTooltip(popupContent, {
+  marker.bindTooltip(loc.name, {
     direction: 'top',
     offset: [0, -8],
     className: 'marker-tooltip',
@@ -109,13 +116,55 @@ LOCATIONS.forEach(loc => {
   });
 
   marker.on('click', () => {
+    cancelPending();
     selectedLocation = loc;
     lastVisibleIdsByTab.articles = '';
     lastVisibleIdsByTab.videos = '';
     renderSidebar(true);
     map.setView([loc.lat, loc.lng], Math.max(map.getZoom(), 14), { animate: true });
   });
-  loc._marker = marker;
+
+  markersById.set(loc.id, marker);
+}
+
+function removeLocation(id) {
+  const marker = markersById.get(id);
+  if (marker) {
+    map.closePopup();
+    markerGroup.removeLayer(marker);
+    markersById.delete(id);
+  }
+  userLocations = userLocations.filter(l => l.id !== id);
+  saveUserLocations(userLocations);
+  if (selectedLocation && selectedLocation.id === id) {
+    selectedLocation = null;
+  }
+  articlesByLoc.delete(id);
+  videosByLoc.delete(id);
+  updatePointCounter();
+  renderSidebar(true);
+}
+
+function addLocation(loc) {
+  userLocations.push(loc);
+  saveUserLocations(userLocations);
+  createMarker(loc);
+  updatePointCounter();
+}
+
+function updatePointCounter() {
+  const el = document.getElementById('pointCounter');
+  if (el) el.textContent = `${userLocations.length} / ${MAX_POINTS} points`;
+}
+
+// Handle remove button clicks inside popups (event delegation)
+map.on('popupopen', (e) => {
+  const container = e.popup.getElement();
+  if (!container) return;
+  const btn = container.querySelector('.remove-point-btn');
+  if (btn) {
+    btn.addEventListener('click', () => removeLocation(btn.dataset.locId));
+  }
 });
 
 // Clear selection when popup closes
@@ -127,6 +176,21 @@ map.on('popupclose', () => {
     renderSidebar(true);
   }
 });
+
+// Initialize existing markers
+userLocations.forEach(createMarker);
+updatePointCounter();
+
+// ══════════════════════════════════════════════════════════
+//  GEOCODER — placeholder, wired up in next task
+// ══════════════════════════════════════════════════════════
+let pendingLocation = null;
+let tempMarker = null;
+
+function cancelPending() {
+  if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+  pendingLocation = null;
+}
 
 // ══════════════════════════════════════════════════════════
 //  NEWS FETCHING — via Cloudflare Worker (cached Google News RSS)
@@ -252,7 +316,6 @@ const TIME_GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'Last Week', 'This 
 // ══════════════════════════════════════════════════════════
 const sidebarBody = document.getElementById('sidebarBody');
 const visibleCountEl = document.getElementById('visibleCount');
-let activeFilter = 'all';
 let activeTab = 'articles';
 let renderGeneration = 0;
 const lastVisibleIdsByTab = { articles: '', videos: '' };
@@ -260,19 +323,14 @@ let selectedLocation = null;
 const articlesByLoc = new Map();
 
 function getVisibleLocations() {
-  // If a point is selected, return only that location
   if (selectedLocation) return [selectedLocation];
-
   const bounds = map.getBounds();
-  return LOCATIONS.filter(loc => {
-    if (activeFilter !== 'all' && loc.category !== activeFilter) return false;
-    return bounds.contains([loc.lat, loc.lng]);
-  });
+  return userLocations.filter(loc => bounds.contains([loc.lat, loc.lng]));
 }
 
 // ── Article rendering ──
 function renderArticleHtml(article) {
-  const catColor = CATEGORY_COLORS[article._loc.category];
+  const tagColor = MARKER_COLOR;
   const thumbHtml = article.thumb
     ? `<img class="news-article-thumb" src="${article.thumb}" alt="" loading="lazy" onerror="this.remove()">`
     : '';
@@ -285,8 +343,8 @@ function renderArticleHtml(article) {
           <span class="news-article-time">${timeAgo(article.pubDate)}</span>
         </div>
         <div class="news-article-title">${article.title}</div>
-        <span class="news-article-tag" style="background:${catColor}18;color:${catColor};">
-          <span class="news-article-tag-dot" style="background:${catColor};"></span>
+        <span class="news-article-tag" style="background:${tagColor}18;color:${tagColor};">
+          <span class="news-article-tag-dot" style="background:${tagColor};"></span>
           ${article._loc.name}
         </span>
       </div>
@@ -331,7 +389,7 @@ function buildArticlesFeedHtml(visibleIds) {
 
 // ── Video rendering ──
 function renderVideoHtml(video) {
-  const catColor = CATEGORY_COLORS[video._loc.category];
+  const tagColor = MARKER_COLOR;
   const dur = formatDuration(video.duration);
   const views = formatViews(video.views);
 
@@ -347,8 +405,8 @@ function renderVideoHtml(video) {
         ${views ? `<span class="sep"></span><span>${views}</span>` : ''}
         ${video.published ? `<span class="sep"></span><span>${timeAgo(video.published)}</span>` : ''}
       </div>
-      <span class="news-article-tag" style="background:${catColor}18;color:${catColor};">
-        <span class="news-article-tag-dot" style="background:${catColor};"></span>
+      <span class="news-article-tag" style="background:${tagColor}18;color:${tagColor};">
+        <span class="news-article-tag-dot" style="background:${tagColor};"></span>
         ${video._loc.name}
       </span>
     </a>
@@ -408,10 +466,24 @@ function renderSidebar(forceRefresh) {
   const visible = getVisibleLocations();
   visibleCountEl.textContent = visible.length;
 
+  if (userLocations.length === 0) {
+    lastVisibleIdsByTab.articles = '';
+    lastVisibleIdsByTab.videos = '';
+    sidebarBody.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">&#128204;</div>
+        <div class="empty-state-title">No points yet</div>
+        <div class="empty-state-text">Search for a place and add it to your map to start tracking news and videos.</div>
+        <div class="empty-state-counter">${userLocations.length} / ${MAX_POINTS} points</div>
+      </div>
+    `;
+    return;
+  }
+
   if (visible.length === 0) {
     lastVisibleIdsByTab.articles = '';
     lastVisibleIdsByTab.videos = '';
-    sidebarBody.innerHTML = `<div class="sidebar-empty">No locations in the current view.<br>Zoom out or pan the map to see locations.</div>`;
+    sidebarBody.innerHTML = `<div class="sidebar-empty">No points in the current view.<br>Zoom out or pan the map.</div>`;
     return;
   }
 
@@ -543,71 +615,11 @@ renderSidebar(true);
 // ══════════════════════════════════════════════════════════
 //  HOME BUTTON
 // ══════════════════════════════════════════════════════════
-const DEFAULT_CENTER = [16.505, 80.515];
-const DEFAULT_ZOOM = 13;
+const DEFAULT_CENTER = [20, 0];
+const DEFAULT_ZOOM = 2;
 
 document.getElementById('homeBtn').addEventListener('click', () => {
   map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: true });
-});
-
-// ══════════════════════════════════════════════════════════
-//  CATEGORY FILTERS (desktop pills)
-// ══════════════════════════════════════════════════════════
-function applyFilter(filter) {
-  activeFilter = filter;
-
-  // Sync desktop pills
-  document.querySelectorAll('.filter-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.filter === filter);
-  });
-
-  // Sync mobile dropdown
-  document.querySelectorAll('.filter-dropdown-item').forEach(b => {
-    b.classList.toggle('active', b.dataset.filter === filter);
-  });
-  document.getElementById('filterLabel').textContent =
-    filter === 'all' ? 'All' : (CATEGORY_LABELS[filter] || filter);
-
-  // Toggle layers
-  Object.entries(layerGroups).forEach(([cat, group]) => {
-    if (filter === 'all' || filter === cat) {
-      map.addLayer(group);
-    } else {
-      map.removeLayer(group);
-    }
-  });
-
-  renderSidebar(true);
-}
-
-document.getElementById('filters').addEventListener('click', (e) => {
-  const btn = e.target.closest('.filter-btn');
-  if (!btn) return;
-  applyFilter(btn.dataset.filter);
-});
-
-// ══════════════════════════════════════════════════════════
-//  FILTER DROPDOWN (mobile)
-// ══════════════════════════════════════════════════════════
-const filterToggle = document.getElementById('filterToggle');
-const filterMenu = document.getElementById('filterMenu');
-
-filterToggle.addEventListener('click', () => {
-  filterMenu.classList.toggle('open');
-});
-
-filterMenu.addEventListener('click', (e) => {
-  const item = e.target.closest('.filter-dropdown-item');
-  if (!item) return;
-  applyFilter(item.dataset.filter);
-  filterMenu.classList.remove('open');
-});
-
-// Close dropdown when tapping outside
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.filter-dropdown')) {
-    filterMenu.classList.remove('open');
-  }
 });
 
 // ══════════════════════════════════════════════════════════
