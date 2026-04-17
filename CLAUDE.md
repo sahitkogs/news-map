@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project context
 
-Vanilla HTML/CSS/JS static site (no build step, no framework). An interactive Leaflet map of Amaravati construction sites with a sidebar that fetches live news (Google News RSS) and YouTube videos for the locations currently in view. Long-term goal is to make this a general template — users will be able to mark their own points and see feeds for them — so avoid hardcoding Amaravati-specific assumptions outside `data.js`.
+Vanilla HTML/CSS/JS static site (no build step, no framework). An interactive Leaflet map where users search for any place in the world, add it as a point (up to 10), and see live news (Google News RSS) and YouTube videos for those locations. User locations are stored in localStorage. The geocoder uses Leaflet Control Geocoder (Nominatim, free, no API key).
 
 ## Common commands
 
@@ -67,8 +67,8 @@ The sidebar reacts to map viewport changes. `LOCATIONS` from `data.js` are filte
 
 ### Files that matter for understanding
 
-- `data.js` — `LOCATIONS` array. The `searchKeywords` field on each location is what gets sent to both News and YouTube searches. Adding/changing locations only requires editing this file.
-- `app.js` — Single-file client. Sections are separated by big banner comments (`MAP INIT`, `MARKERS`, `NEWS FETCHING`, `YOUTUBE FETCHING`, etc.). Read the relevant section, not the whole file.
+- `data.js` — **Deleted.** User locations are now stored in localStorage and managed via the in-app geocoder search bar.
+- `app.js` — Single-file client. Sections: `MAP INIT`, `USER LOCATIONS` (localStorage CRUD), `MARKERS`, `GEOCODER` (search + confirmation panel), `NEWS FETCHING`, `YOUTUBE FETCHING`, `SIDEBAR`, etc. Read the relevant section, not the whole file.
 - `cors-proxy/worker.js` — The Cloudflare Worker. `handleYouTubeSearch` and `handleNewsSearch` both follow the same pattern: check `caches.default`, return with `X-Cache: HIT` if found, else fetch upstream and `cache.put` before returning with `X-Cache: MISS`.
 - `cors-proxy/wrangler.toml` — Defines top-level (production) deployment and `[env.staging]` override. Each env has independent secrets.
 

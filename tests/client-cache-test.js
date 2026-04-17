@@ -24,17 +24,39 @@ function assert(condition, msg) {
   console.log(`=== Client Cache Tests ===`);
   console.log(`URL: ${BASE_URL}\n`);
 
-  // ── Test 1: localStorage gets populated after first load ──
+  // Seed a user location so the app has something to fetch
+  const testLocation = {
+    id: 'test_cache_1',
+    name: 'Hyderabad',
+    lat: 17.385,
+    lng: 78.4867,
+    searchKeywords: 'Hyderabad India news',
+    addedAt: Date.now()
+  };
+
+  // Navigate first to set localStorage on the correct origin
+  await page.goto(BASE_URL);
+  await page.evaluate((loc) => {
+    localStorage.setItem('userLocations', JSON.stringify([loc]));
+  }, testLocation);
+
+  // ── Test 1: localStorage gets populated after load ──
   console.log('--- Test 1: localStorage populated on first load ---');
+
+  // Reload so the app reads the seeded location
   await page.goto(BASE_URL);
 
-  // Wait for articles to finish loading first (they load on default tab)
+  // Pan map to the test location so it's in view
+  await page.evaluate(([lat, lng]) => {
+    map.setView([lat, lng], 10);
+  }, [testLocation.lat, testLocation.lng]);
+
+  // Wait for articles to finish loading
   await page.waitForTimeout(15000);
 
-  // Click YouTube tab and wait for videos to load
+  // Click YouTube tab and wait for videos
   await page.click('.sidebar-tab:nth-child(2)');
 
-  // Wait for video cards to appear, with generous timeout
   let videosLoaded = false;
   try {
     await page.waitForSelector('.video-card', { timeout: 30000 });
@@ -70,7 +92,7 @@ function assert(condition, msg) {
 
   console.log('');
 
-  // ── Test 2: Second load uses cache — no Worker requests for cached terms ──
+  // ── Test 2: Second load uses cache — no Worker requests ──
   console.log('--- Test 2: Cached load makes no Worker requests ---');
 
   const workerRequests = [];
@@ -78,14 +100,16 @@ function assert(condition, msg) {
     workerRequests.push(route.request().url());
     route.continue();
   });
-  // Also catch production Worker
   await page.route('**/cors-proxy.sahit-koganti.workers.dev/**', (route) => {
     workerRequests.push(route.request().url());
     route.continue();
   });
 
-  // Reload the page — localStorage cache should serve everything
+  // Reload — localStorage cache should serve everything
   await page.goto(BASE_URL);
+  await page.evaluate(([lat, lng]) => {
+    map.setView([lat, lng], 10);
+  }, [testLocation.lat, testLocation.lng]);
   await page.waitForTimeout(8000);
 
   // Click YouTube tab
@@ -94,7 +118,6 @@ function assert(condition, msg) {
 
   const videoCards = await page.$$eval('.video-card', els => els.length);
 
-  // Check how many Worker requests were made
   const ytRequests = workerRequests.filter(u => u.includes('/youtube/search'));
   const newsRequests = workerRequests.filter(u => u.includes('/news/search'));
 
@@ -114,7 +137,7 @@ function assert(condition, msg) {
 
   console.log('');
 
-  // ── Test 3: Cache entries have fetchedAt timestamps ──
+  // ── Test 3: Cache entries have valid timestamps ──
   console.log('--- Test 3: Cache entries have valid timestamps ---');
 
   const timestamps = await page.evaluate(() => {
@@ -143,6 +166,11 @@ function assert(condition, msg) {
   }
 
   console.log('');
+
+  // ── Cleanup ──
+  await page.evaluate(() => {
+    localStorage.removeItem('userLocations');
+  });
 
   // ── Summary ──
   console.log('=== Results ===');
